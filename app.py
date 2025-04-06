@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 
 ## .venv\Scripts\Activate.ps1     - Tror denne må kjøres for å kunne kjøre appen, litt usikker
+## streamlit run app.py i terminal
 
 # Definerer forskjellige sider
 main_page = st.Page("main_page.py", title="Main Page", icon="🎈")
