@@ -2,7 +2,9 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-## .venv\Scripts\Activate.ps1     - Tror denne må kjøres for å kunne kjøre appen, litt usikker
+## .\.venv\Scripts\Activate.ps1     - Tror denne må kjøres for å kunne kjøre appen, litt usikker
+## .\\venv\Scripts\Activate.ps1
+
 ## streamlit run app.py i terminal
 
 # Definerer forskjellige sider

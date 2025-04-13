@@ -19,13 +19,29 @@ column_names = [desc[0] for desc in cursor.description]
 cursor.close()
 conn.close()
 ##############################################################
-
-
 if "show_form" not in st.session_state:
     st.session_state.show_form = False
 
-if st.button("Add New Restaurant:"):
-    st.session_state.show_form = not st.session_state.show_form
+if "show_delete_form" not in st.session_state:
+    st.session_state.show_delete_form = False
+
+col1, col2 = st.columns(2)
+
+with col1:
+    if st.button("Add New Restaurant:"):
+        st.session_state.show_form = not st.session_state.show_form
+        st.session_state.show_delete_form = False
+
+with col2:
+    
+    if st.button("Delete a Restaurant"):
+        st.session_state.show_delete_form = not st.session_state.show_delete_form
+        st.session_state.show_form = False
+
+
+
+##################### Add new REstaurant ############################
+
 
 if st.session_state.show_form:
 
@@ -53,6 +69,34 @@ if st.session_state.show_form:
                 cursor.close()
                 conn.close()
                 st.success(f"'{rName}' added successfully!")
+
+####################################################
+
+########################### Delete A Restaurant #######################
+
+if st.session_state.show_delete_form:
+    st.subheader("Delete a Restaurant")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT restaurantID FROM restaurants")
+    restaurant_names = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    restaurant_to_delete = st.selectbox("Select Restaurant To Delete", restaurant_names)
+
+    if st.button("Confirm Delete"):
+        if restaurant_to_delete:
+            conn = get_connection()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM restaurants WHERE restaurantID = %s", (restaurant_to_delete))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            st.success(f"Restaurant with ID {restaurant_to_delete} was delted successfully")
+
+
 
 # Format TIME fields as strings
 formatted_rows = []
