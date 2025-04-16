@@ -1,5 +1,9 @@
 import streamlit as st
 
+if not st.session_state.get("authenticated"):
+    st.warning("Du må være logget inn for å se denne siden.")
+    st.stop()
+
 st.markdown("# Page 2 ❄️")
 st.sidebar.markdown("# Page 2 ❄️")
 

@@ -11,8 +11,10 @@ import numpy as np
 main_page = st.Page("main_page.py", title="Main Page", icon="🎈")
 page_2 = st.Page("page_2.py", title="Page 2", icon="❄️")
 page_3 = st.Page("page_3.py", title="Restaurants", icon="🎉")
+page_4 = st.Page("page_4.py", title="User", icon="")
+loginPage = st.Page("loginPage.py", title="login", icon="🔧")
 
-pg = st.navigation([main_page, page_2, page_3])
+pg = st.navigation([main_page, page_2, page_3, page_4, loginPage])
 
 pg.run()
 

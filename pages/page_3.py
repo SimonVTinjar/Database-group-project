@@ -7,6 +7,10 @@ from datetime import time, timedelta
 
 from db import get_connection
 
+if not st.session_state.get("authenticated"):
+    st.warning("Du må være logget inn for å se denne siden.")
+    st.stop()
+
 st.write("Hello World")
 st.subheader("Restaurants")
 
