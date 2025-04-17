@@ -1,8 +1,13 @@
 import streamlit as st
+from streamlit_extras.switch_page_button import switch_page
+
+
 
 if not st.session_state.get("authenticated"):
     st.warning("Du må være logget inn for å se denne siden.")
     st.stop()
+
+
 
 st.markdown("# Page 2 ❄️")
 st.sidebar.markdown("# Page 2 ❄️")
