@@ -28,12 +28,13 @@ def show_menus():
         return
 
     # Vis bare menyer brukeren har tilgang til
-    cursor.execute("""
+    format_string = ",".join(["%s"] * len(restaurant_ids))
+    cursor.execute(f"""
         SELECT m.menuID, m.menuName, r.rName AS restaurant, m.price, m.description
         FROM menu m
         JOIN restaurant r ON m.restaurantID = r.restaurantID
-        WHERE m.restaurantID IN (%s)
-    """ % ",".join(["%s"] * len(restaurant_ids)), tuple(restaurant_ids))
+        WHERE m.restaurantID IN ({format_string})
+    """, tuple(restaurant_ids))
 
     menus = cursor.fetchall()
     df = pd.DataFrame(menus)
@@ -64,14 +65,12 @@ def show_menus():
             st.success("Meny opprettet!")
             st.rerun()
 
-    # ------------------ Legg til produkter ------------------
+    # ------------------ Legg til produkter i meny ------------------
     st.subheader("➕ Legg til produkter i meny")
-
-    # Hent tilgjengelige menyer brukeren kan redigere
-    cursor.execute("""
+    cursor.execute(f"""
         SELECT menuID, menuName FROM menu
-        WHERE restaurantID IN (%s)
-    """ % ",".join(["%s"] * len(restaurant_ids)), tuple(restaurant_ids))
+        WHERE restaurantID IN ({format_string})
+    """, tuple(restaurant_ids))
     menus = cursor.fetchall()
     if not menus:
         st.warning("Ingen menyer tilgjengelig.")
@@ -98,7 +97,7 @@ def show_menus():
         except Exception as e:
             st.error(f"Feil: {e}")
 
-    # ------------------ Vis produkter i valgt meny ------------------
+    # ------------------ Vis og fjern produkter i valgt meny ------------------
     st.subheader("📦 Produkter i valgt meny")
     cursor.execute("""
         SELECT mi.menuID, p.productID, p.name
@@ -108,9 +107,39 @@ def show_menus():
     """, (menu_id,))
     items = cursor.fetchall()
     if items:
-        st.dataframe(pd.DataFrame(items))
+        df_items = pd.DataFrame(items)
+        st.dataframe(df_items)
+
+        to_remove = st.selectbox("Velg produkt å fjerne", [f"{i['productID']} - {i['name']}" for i in items])
+        if st.button("🗑️ Fjern valgt produkt fra meny"):
+            prod_id = int(to_remove.split(" - ")[0])
+            cursor.execute("""
+                DELETE FROM menuitem WHERE menuID = %s AND productID = %s
+            """, (menu_id, prod_id))
+            conn.commit()
+            st.success("Produkt fjernet fra menyen.")
+            st.rerun()
     else:
         st.info("Ingen produkter lagt til i denne menyen.")
+
+    # ------------------ Opprett nytt produkt ------------------
+    st.subheader("🆕 Opprett nytt produkt")
+    with st.form("create_product"):
+        prod_name = st.text_input("Produktnavn")
+        prod_desc = st.text_area("Beskrivelse")
+        create_product = st.form_submit_button("Opprett produkt")
+
+        if create_product:
+            if not prod_name.strip():
+                st.error("Produktnavn må fylles ut.")
+            else:
+                cursor.execute("""
+                    INSERT INTO product (name, description)
+                    VALUES (%s, %s)
+                """, (prod_name, prod_desc))
+                conn.commit()
+                st.success("Produkt opprettet!")
+                st.rerun()
 
     cursor.close()
     conn.close()
