@@ -23,27 +23,34 @@ def show_orders():
 
     if not restaurant_ids:
         st.warning("Du har ikke tilgang til noen restauranter.")
+        cursor.close()
+        conn.close()
         return
 
+    # Lag riktig antall %s-plassholdere
+    placeholders = ",".join(["%s"] * len(restaurant_ids))
+
     # Hent bestillinger for disse restaurantene
-    cursor.execute("""
+    query = f"""
         SELECT o.orderID, o.orderTime, o.status,
                u.username AS customer,
                m.menuName, m.price,
                r.rName AS restaurant
-        FROM orders o
-        JOIN users u ON o.userID = u.user_id
+        FROM Ordered o
+        JOIN users u ON o.userID = u.userID
         JOIN menu m ON o.menuID = m.menuID
         JOIN restaurant r ON m.restaurantID = r.restaurantID
-        WHERE m.restaurantID IN (%s)
+        WHERE m.restaurantID IN ({placeholders})
         ORDER BY o.orderTime DESC
-    """ % ",".join(["%s"] * len(restaurant_ids)), tuple(restaurant_ids))
-
+    """
+    cursor.execute(query, tuple(restaurant_ids))
     orders = cursor.fetchall()
+
     if not orders:
         st.info("Ingen bestillinger funnet.")
     else:
         df = pd.DataFrame(orders)
+        df["orderTime"] = pd.to_datetime(df["orderTime"]).dt.strftime("%Y-%m-%d %H:%M")
         st.dataframe(df)
 
     cursor.close()

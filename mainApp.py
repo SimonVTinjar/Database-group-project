@@ -4,6 +4,7 @@ from views.restaurants import show_restaurants
 from views.menus import show_menus
 from views.orders import show_orders
 from db import get_connection
+from views.place_order import place_order
 
 st.set_page_config(page_title="Restaurant Admin", page_icon="🍽️")
 
@@ -21,15 +22,15 @@ if not st.session_state.authenticated:
     if st.button("Logg inn"):
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT user_id, password FROM users WHERE username = %s", (username,))
+        cursor.execute("SELECT userID, password FROM users WHERE username = %s", (username,))
         result = cursor.fetchone()
         cursor.close()
         conn.close()
 
-        if result and result[1] == password:  # ✅ dette er riktig
+        if result and result[1] == password:  # ✅ Sjekk passord
             st.session_state.authenticated = True
             st.session_state.username = username
-            st.session_state.user_id = result[0]  # ✅ viktig for tilgang
+            st.session_state.user_id = result[0]  # ✅ Dette er riktig navn
             st.rerun()
         else:
             st.error("Feil brukernavn eller passord.")
@@ -37,7 +38,8 @@ if not st.session_state.authenticated:
 else:
     # -------------------- SIDEPANEL --------------------
     st.sidebar.title("🧭 Navigasjon")
-    side = st.sidebar.radio("Velg side:", ["Hjem", "Restauranter", "Menyer", "Bestillinger"])
+    side = st.sidebar.radio("Navigasjon", ["Hjem", "Restauranter", "Menyer", "Bestillinger", "Ny bestilling"])
+
     st.session_state.page = side
 
     # -------------------- HOVEDINNHOLD --------------------
@@ -49,9 +51,12 @@ else:
         show_menus()
     elif side == "Bestillinger":
         show_orders()
+    elif side == "Ny bestilling":
+        place_order()
 
     # -------------------- LOGG UT --------------------
     if st.sidebar.button("Logg ut"):
         st.session_state.authenticated = False
         st.session_state.username = ""
+        st.session_state.user_id = None
         st.rerun()
