@@ -5,6 +5,7 @@ from views.menus import show_menus
 from views.orders import show_orders
 from db import get_connection
 from views.place_order import place_order
+from views.statistics import show_statistics
 
 st.set_page_config(page_title="Restaurant Admin", page_icon="🍽️")
 
@@ -38,7 +39,8 @@ if not st.session_state.authenticated:
 else:
     # -------------------- SIDEPANEL --------------------
     st.sidebar.title("🧭 Navigasjon")
-    side = st.sidebar.radio("Navigasjon", ["Hjem", "Restauranter", "Menyer", "Bestillinger", "Ny bestilling"])
+    side = st.sidebar.radio("Navigasjon", ["Hjem", "Restauranter", "Menyer", "Bestillinger", "Ny bestilling", "Statistikk"])
+
 
     st.session_state.page = side
 
@@ -53,6 +55,9 @@ else:
         show_orders()
     elif side == "Ny bestilling":
         place_order()
+    elif side == "Statistikk":
+        show_statistics()
+
 
     # -------------------- LOGG UT --------------------
     if st.sidebar.button("Logg ut"):

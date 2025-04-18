@@ -13,25 +13,17 @@ def show_orders():
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
-    # Hent restaurantID-er brukeren har tilgang til
     cursor.execute("""
-        SELECT restaurantID
-        FROM restaurant_admins
-        WHERE user_id = %s
+        SELECT restaurantID FROM restaurant_admins WHERE user_id = %s
     """, (user_id,))
     restaurant_ids = [row["restaurantID"] for row in cursor.fetchall()]
 
     if not restaurant_ids:
         st.warning("Du har ikke tilgang til noen restauranter.")
-        cursor.close()
-        conn.close()
         return
 
-    # Lag riktig antall %s-plassholdere
     placeholders = ",".join(["%s"] * len(restaurant_ids))
-
-    # Hent bestillinger for disse restaurantene
-    query = f"""
+    cursor.execute(f"""
         SELECT o.orderID, o.orderTime, o.status,
                u.username AS customer,
                m.menuName, m.price,
@@ -42,16 +34,36 @@ def show_orders():
         JOIN restaurant r ON m.restaurantID = r.restaurantID
         WHERE m.restaurantID IN ({placeholders})
         ORDER BY o.orderTime DESC
-    """
-    cursor.execute(query, tuple(restaurant_ids))
-    orders = cursor.fetchall()
+    """, tuple(restaurant_ids))
 
+    orders = cursor.fetchall()
     if not orders:
         st.info("Ingen bestillinger funnet.")
-    else:
-        df = pd.DataFrame(orders)
-        df["orderTime"] = pd.to_datetime(df["orderTime"]).dt.strftime("%Y-%m-%d %H:%M")
-        st.dataframe(df)
+        return
+
+    for order in orders:
+        with st.expander(f"📦 Bestilling #{order['orderID']} – {order['restaurant']}"):
+            st.write(f"**Tid:** {order['orderTime']}")
+            st.write(f"**Kunde:** {order['customer']}")
+            st.write(f"**Meny:** {order['menuName']} – {order['price']} kr")
+            st.write(f"**Status nå:** `{order['status']}`")
+
+            new_status = st.selectbox(
+                "Endre status", 
+                ["Mottatt", "Underveis", "Levert"],
+                index=["Mottatt", "Underveis", "Levert"].index(order["status"]),
+                key=f"status_{order['orderID']}"
+            )
+
+            if st.button("💾 Oppdater status", key=f"save_{order['orderID']}"):
+                update_cursor = conn.cursor()
+                update_cursor.execute("""
+                    UPDATE Ordered SET status = %s WHERE orderID = %s
+                """, (new_status, order["orderID"]))
+                conn.commit()
+                update_cursor.close()
+                st.success("Status oppdatert!")
+                st.rerun()
 
     cursor.close()
     conn.close()
