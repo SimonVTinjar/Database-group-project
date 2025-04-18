@@ -6,7 +6,6 @@ from db import get_connection
 def show_restaurants():
     st.title("🏢 Dine restauranter")
 
-    # Krever at bruker er innlogget og har user_id
     user_id = st.session_state.get("user_id")
     if user_id is None:
         st.error("Du må være innlogget for å se restauranter.")
@@ -14,7 +13,7 @@ def show_restaurants():
 
     # Hent restauranter brukeren har tilgang til
     conn = get_connection()
-    cursor = conn.cursor()    
+    cursor = conn.cursor()
     cursor.execute("""
         SELECT r.*
         FROM restaurant_admins ra
@@ -27,6 +26,9 @@ def show_restaurants():
     conn.close()
 
     df = pd.DataFrame(rows, columns=columns)
+    df["openingTime"] = df["openingTime"].apply(lambda t: f"{int(t.seconds//3600):02d}:{int((t.seconds%3600)//60):02d}")
+    df["closingTime"] = df["closingTime"].apply(lambda t: f"{int(t.seconds//3600):02d}:{int((t.seconds%3600)//60):02d}")
+
     st.table(df)
 
     st.subheader("➕ Legg til ny restaurant")
@@ -50,7 +52,6 @@ def show_restaurants():
                 """, (rName, address, phoneNr, openingTime, closingTime))
                 restaurant_id = cursor.lastrowid
 
-                # Gi tilgang til den nye restauranten
                 cursor.execute("""
                     INSERT INTO restaurant_admins (restaurantID, user_id)
                     VALUES (%s, %s)
@@ -70,9 +71,7 @@ def show_restaurants():
         if st.button("Slett valgt restaurant"):
             conn = get_connection()
             cursor = conn.cursor()
-            # Slett fra admin-tilgang først
             cursor.execute("DELETE FROM restaurant_admins WHERE restaurantID = %s AND user_id = %s", (selected_id, user_id))
-            # Slett selve restauranten (CASCADE vil ta resten)
             cursor.execute("DELETE FROM restaurant WHERE restaurantID = %s", (selected_id,))
             conn.commit()
             cursor.close()
