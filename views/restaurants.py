@@ -59,6 +59,52 @@ def show_restaurants():
                 st.success(f"{rName} ble lagt til og koblet til brukeren din.")
                 st.rerun()
 
+    ###################### UPDATE #########################
+    st.subheader("Oppdater restaurant")
+    if not df.empty:
+        update_id = st.selectbox("Velg restaurant for oppdatering",
+                                 df["restaurantID"].tolist(),
+                                 key="update_restaurant")
+        
+        if update_id is not None:
+            cursor.execute("""
+                           SELECT rName, address, phoneNr, openingTime, closingTime 
+                           FROM restaurant
+                           WHERE restaurantID = %s""", (update_id,))
+            curr  = cursor.fetchone()
+
+            if curr:
+                curr_name, curr_addr, curr_phone, curr_open, curr_close = curr
+                with st.form("update_form"):
+                    new_name = st.text_input("Navn",    value=curr_name)
+                    new_addr = st.text_input("Adresse", value=curr_addr)
+                    new_phone = st.text_input("Telefon", value=curr_phone)
+                    new_open = st.time_input("Åpningstid", value=datetime.time(9, 0))
+                    new_close = st.time_input("Stengetid", value=datetime.time(23, 0))
+
+                    button = st.form_submit_button("Oppdater")
+                    if button:
+                        cursor.execute("""
+                                       Update restaurant
+                                       SET rName=%s, address=%s, phoneNr=%s, openingTime=%s, closingTime=%s
+                                       WHERE restaurantID=%s
+                                    """, (
+                                        new_name.strip(),
+                                        new_addr.strip(),
+                                        new_phone.strip(),
+                                        new_open,
+                                        new_close,
+                                        update_id
+                                    ))
+                        conn.commit()
+                        st.success(f"Restraurant {update_id} oppdatert")
+                        st.rerun
+
+            else:
+                st.error("Fant ingen restaurant")
+                                    
+
+
     st.subheader("🗑️ Slett restaurant")
     if not df.empty:
         selected_id = st.selectbox("Velg restaurant-ID for sletting", df["restaurantID"].tolist())
