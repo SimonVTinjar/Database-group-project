@@ -10,17 +10,18 @@ def show_userpanel():
     if col1.button("Logg ut"):
         st.session_state.authenticated = False
         st.session_state.username = ""
+        st.session_state.ResUserID = None
         st.rerun()
 
     if col2.button("Endre passord"):
-        st.session_state.show_password_change = not st.session_state.show_password_change
+        st.session_state.show_password_change = not st.session_state.get("show_password_change", False)
         st.session_state.show_delete_form = False
 
     if st.button("Slett min bruker"):
-        st.session_state.show_delete_form = not st.session_state.show_delete_form
+        st.session_state.show_delete_form = not st.session_state.get("show_delete_form", False)
         st.session_state.show_password_change = False
 
-    # Endre passord
+    # --- Endre passord ---
     if st.session_state.get("show_password_change"):
         st.subheader("🔐 Endre passord")
         old_password = st.text_input("Nåværende passord", type="password")
@@ -29,11 +30,11 @@ def show_userpanel():
         if st.button("Oppdater passord"):
             conn = get_connection()
             cursor = conn.cursor()
-            cursor.execute("SELECT password FROM users WHERE username = %s", (st.session_state.username,))
+            cursor.execute("SELECT password FROM Restaurantadminuser WHERE ResUsername = %s", (st.session_state.username,))
             result = cursor.fetchone()
 
             if result and result[0] == old_password:
-                cursor.execute("UPDATE users SET password = %s WHERE username = %s", (new_password, st.session_state.username))
+                cursor.execute("UPDATE Restaurantadminuser SET password = %s WHERE ResUsername = %s", (new_password, st.session_state.username))
                 conn.commit()
                 st.success("✅ Passord oppdatert!")
             else:
@@ -41,24 +42,28 @@ def show_userpanel():
             cursor.close()
             conn.close()
 
-    # Slett bruker
+    # --- Slett bruker ---
     if st.session_state.get("show_delete_form"):
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM users WHERE username = %s", (st.session_state.username,))
-        conn.commit()
-        cursor.close()
-        conn.close()
-        st.success("Brukeren er slettet.")
-        st.session_state.authenticated = False
-        st.session_state.username = ""
-        st.rerun()
+        if st.session_state.ResUserID == 1:
+            st.warning("Superadmin-brukeren kan ikke slettes.")
+        else:
+            conn = get_connection()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM Restaurantadminuser WHERE ResUsername = %s", (st.session_state.username,))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            st.success("Brukeren er slettet.")
+            st.session_state.authenticated = False
+            st.session_state.username = ""
+            st.session_state.ResUserID = None
+            st.rerun()
 
-    # Vis brukerinformasjon
+    # --- Vis brukerinformasjon ---
     st.subheader("📋 Min konto")
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE username = %s", (st.session_state.username,))
+    cursor.execute("SELECT * FROM Restaurantadminuser WHERE ResUsername = %s", (st.session_state.username,))
     rows = cursor.fetchall()
     column_names = [desc[0] for desc in cursor.description]
     cursor.close()

@@ -5,7 +5,7 @@ from db import get_connection
 def show_orders():
     st.title("📦 Bestillinger")
 
-    user_id = st.session_state.get("user_id")
+    user_id = st.session_state.get("ResUserID")  # bruker Restaurantadminuser ID
     if user_id is None:
         st.error("Du må være innlogget.")
         st.stop()
@@ -13,8 +13,9 @@ def show_orders():
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
+    # Hent restaurant-IDene brukeren har tilgang til
     cursor.execute("""
-        SELECT restaurantID FROM restaurant_admins WHERE user_id = %s
+        SELECT restaurantID FROM restaurantadmin WHERE ResUserID = %s
     """, (user_id,))
     restaurant_ids = [row["restaurantID"] for row in cursor.fetchall()]
 
@@ -25,11 +26,11 @@ def show_orders():
     placeholders = ",".join(["%s"] * len(restaurant_ids))
     cursor.execute(f"""
         SELECT o.orderID, o.orderTime, o.status,
-               u.username AS customer,
+               ru.ResUsername AS customer,
                m.menuName, m.price,
                r.rName AS restaurant
         FROM Ordered o
-        JOIN users u ON o.userID = u.userID
+        JOIN restaurantadminuser ru ON o.userID = ru.ResUserID
         JOIN menu m ON o.menuID = m.menuID
         JOIN restaurant r ON m.restaurantID = r.restaurantID
         WHERE m.restaurantID IN ({placeholders})

@@ -5,17 +5,39 @@ from db import get_connection
 def show_deliveries():
     st.title("🚚 Leveringsoversikt")
 
+    user_id = st.session_state.get("ResUserID")
+    if not user_id:
+        st.error("Du må være innlogget.")
+        st.stop()
+
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
-    cursor.execute("""
-        SELECT d.deliveryID, d.orderID, d.deliveryTime, d.deliveryStatus, u.username, r.rName
+    # Hent restaurantene brukeren har tilgang til
+    cursor.execute("SELECT restaurantID FROM restaurantadmin WHERE ResUserID = %s", (user_id,))
+    restaurant_ids = [row["restaurantID"] for row in cursor.fetchall()]
+
+    if not restaurant_ids:
+        st.warning("Du har ikke tilgang til noen restauranter.")
+        cursor.close()
+        conn.close()
+        return
+
+    placeholders = ",".join(["%s"] * len(restaurant_ids))
+
+    # Hent leveranser knyttet til bestillinger fra restauranter brukeren har tilgang til
+    query = f"""
+        SELECT d.deliveryID, d.orderID, d.deliveryTime, d.deliveryStatus, 
+               ru.ResUsername AS customer, r.rName
         FROM Delivery d
         JOIN Ordered o ON d.orderID = o.orderID
-        JOIN users u ON o.userID = u.userID
+        JOIN Restaurantadminuser ru ON o.userID = ru.ResUserID
         JOIN menu m ON o.menuID = m.menuID
         JOIN restaurant r ON m.restaurantID = r.restaurantID
-    """)
+        WHERE r.restaurantID IN ({placeholders})
+        ORDER BY d.deliveryTime DESC
+    """
+    cursor.execute(query, tuple(restaurant_ids))
     deliveries = cursor.fetchall()
 
     if not deliveries:

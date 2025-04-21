@@ -5,7 +5,7 @@ from db import get_connection
 def show_menus():
     st.title("📋 Menyadministrasjon")
 
-    user_id = st.session_state.get("user_id")
+    user_id = st.session_state.get("ResUserID")
     if user_id is None:
         st.error("Du må være innlogget.")
         st.stop()
@@ -16,9 +16,9 @@ def show_menus():
     # Hent restauranter brukeren har tilgang til
     cursor.execute("""
         SELECT r.restaurantID, r.rName
-        FROM restaurant_admins ra
+        FROM restaurantadmin ra
         JOIN restaurant r ON ra.restaurantID = r.restaurantID
-        WHERE ra.user_id = %s
+        WHERE ra.ResUserID = %s
     """, (user_id,))
     allowed_restaurants = cursor.fetchall()
     restaurant_ids = [r["restaurantID"] for r in allowed_restaurants]

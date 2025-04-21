@@ -5,7 +5,7 @@ from db import get_connection
 def show_statistics():
     st.title("📊 Statistikk")
 
-    user_id = st.session_state.get("user_id")
+    user_id = st.session_state.get("ResUserID")
     if not user_id:
         st.error("Du må være innlogget.")
         st.stop()
@@ -15,7 +15,7 @@ def show_statistics():
 
     # Hent restaurantene brukeren har tilgang til
     cursor.execute("""
-        SELECT restaurantID FROM restaurant_admins WHERE user_id = %s
+        SELECT restaurantID FROM restaurantadmin WHERE ResUserID = %s
     """, (user_id,))
     restaurant_ids = [row["restaurantID"] for row in cursor.fetchall()]
 
@@ -34,6 +34,7 @@ def show_statistics():
         WHERE r.restaurantID IN ({placeholders})
     """, tuple(restaurant_ids))
     orders = cursor.fetchall()
+
     cursor.close()
     conn.close()
 

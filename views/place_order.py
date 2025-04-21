@@ -5,7 +5,7 @@ from db import get_connection
 def place_order():
     st.title("🛒 Legg inn bestilling")
 
-    user_id = st.session_state.get("user_id")
+    user_id = st.session_state.get("ResUserID")  # Bruk riktig ID fra session
     if user_id is None:
         st.error("Du må være logget inn for å bestille.")
         st.stop()

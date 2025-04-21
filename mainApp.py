@@ -24,16 +24,17 @@ if not st.session_state.authenticated:
 
     if st.button("Logg inn"):
         conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT userID, password FROM users WHERE username = %s", (username,))
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT ResUserID, password, role FROM Restaurantadminuser WHERE ResUsername = %s", (username,))
         result = cursor.fetchone()
         cursor.close()
         conn.close()
 
-        if result and result[1] == password:  # ✅ Sjekk passord
+        if result and result["password"] == password:
             st.session_state.authenticated = True
             st.session_state.username = username
-            st.session_state.user_id = result[0]  # ✅ Dette er riktig navn
+            st.session_state.ResUserID = result["ResUserID"]
+            st.session_state.role = result["role"]
             st.rerun()
         else:
             st.error("Feil brukernavn eller passord.")

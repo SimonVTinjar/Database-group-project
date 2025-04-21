@@ -6,7 +6,7 @@ from db import get_connection
 def show_restaurants():
     st.title("🏢 Dine restauranter")
 
-    user_id = st.session_state.get("user_id")
+    user_id = st.session_state.get("ResUserID")
     if user_id is None:
         st.error("Du må være innlogget for å se restauranter.")
         st.stop()
@@ -17,15 +17,14 @@ def show_restaurants():
     # Hent restauranter som brukeren har tilgang til
     cursor.execute("""
         SELECT r.*
-        FROM restaurant_admins ra
+        FROM restaurantadmin ra
         JOIN restaurant r ON ra.restaurantID = r.restaurantID
-        WHERE ra.user_id = %s
+        WHERE ra.ResUserID = %s
     """, (user_id,))
     rows = cursor.fetchall()
     columns = [desc[0] for desc in cursor.description]
     df = pd.DataFrame(rows, columns=columns)
 
-    # Formatér tid
     df["openingTime"] = df["openingTime"].apply(lambda t: f"{int(t.seconds//3600):02d}:{int((t.seconds%3600)//60):02d}")
     df["closingTime"] = df["closingTime"].apply(lambda t: f"{int(t.seconds//3600):02d}:{int((t.seconds%3600)//60):02d}")
 
@@ -52,7 +51,7 @@ def show_restaurants():
                 restaurant_id = cursor.lastrowid
 
                 cursor.execute("""
-                    INSERT INTO restaurant_admins (restaurantID, user_id)
+                    INSERT INTO restaurantadmin (restaurantID, ResUserID)
                     VALUES (%s, %s)
                 """, (restaurant_id, user_id))
 
@@ -64,7 +63,7 @@ def show_restaurants():
     if not df.empty:
         selected_id = st.selectbox("Velg restaurant-ID for sletting", df["restaurantID"].tolist())
         if st.button("Slett valgt restaurant"):
-            cursor.execute("DELETE FROM restaurant_admins WHERE restaurantID = %s AND user_id = %s", (selected_id, user_id))
+            cursor.execute("DELETE FROM restaurantadmin WHERE restaurantID = %s AND ResUserID = %s", (selected_id, user_id))
             cursor.execute("DELETE FROM restaurant WHERE restaurantID = %s", (selected_id,))
             conn.commit()
             st.success("Restaurant slettet.")
@@ -75,30 +74,27 @@ def show_restaurants():
         selected_id = st.selectbox("Velg restaurant-ID for å administrere brukere", df["restaurantID"].tolist(), key="admin_user")
 
         # Legg til bruker
-        new_user_id = st.number_input("Bruker-ID som skal få tilgang", min_value=1, step=1, key="user_add")
+        new_user_id = st.number_input("ResUserID som skal få tilgang", min_value=1, step=1, key="user_add")
         if st.button("Gi tilgang til restaurant"):
             try:
-                cursor.execute("INSERT INTO restaurant_admins (restaurantID, user_id) VALUES (%s, %s)", (selected_id, new_user_id))
+                cursor.execute("INSERT INTO restaurantadmin (restaurantID, ResUserID) VALUES (%s, %s)", (selected_id, new_user_id))
                 conn.commit()
                 st.success("Bruker lagt til!")
             except:
                 st.warning("Brukeren har kanskje allerede tilgang.")
 
         # Fjern bruker
-        # Vis brukere knyttet til restauranten (unntatt superadmin)
-        cursor.execute("""SELECT u.userID, u.username FROM restaurant_admins ra
-        JOIN users u ON ra.user_id = u.userID
-        WHERE ra.restaurantID = %s AND u.userID != 1
+        cursor.execute("""SELECT u.ResUserID, u.ResUsername FROM restaurantadmin ra
+        JOIN restaurantadminuser u ON ra.ResUserID = u.ResUserID
+        WHERE ra.restaurantID = %s AND u.ResUserID != 1
         """, (selected_id,))
-
-
         admins = cursor.fetchall()
         if admins:
             admin_map = {f"{a[1]} (ID: {a[0]})": a[0] for a in admins if a[0] != user_id}
             if admin_map:
                 user_to_remove = st.selectbox("Fjern tilgang for:", list(admin_map.keys()))
                 if st.button("Fjern tilgang"):
-                    cursor.execute("DELETE FROM restaurant_admins WHERE restaurantID = %s AND user_id = %s", (selected_id, admin_map[user_to_remove]))
+                    cursor.execute("DELETE FROM restaurantadmin WHERE restaurantID = %s AND ResUserID = %s", (selected_id, admin_map[user_to_remove]))
                     conn.commit()
                     st.success("Bruker fjernet.")
                     st.rerun()
