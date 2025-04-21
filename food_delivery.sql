@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: 19. Apr, 2025 00:55 AM
+-- Generation Time: 21. Apr, 2025 11:50 AM
 -- Tjener-versjon: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -43,7 +43,7 @@ CREATE TABLE `delivery` (
 
 INSERT INTO `delivery` (`deliveryID`, `orderID`, `driverID`, `deliveryStatus`, `deliveryNote`, `phoneNrUser`, `deliveryTime`) VALUES
 (1, 1, 1, 'Levert', 'Sett utenfor døren', '22222222', '2025-04-19 00:48:29'),
-(2, 2, 2, 'Avbrutt', 'Ring ved ankomst', '33333333', '2025-04-19 00:48:29');
+(2, 2, 2, 'På vei', 'Ring ved ankomst', '33333333', '2025-04-19 00:48:29');
 
 -- --------------------------------------------------------
 
@@ -187,8 +187,8 @@ INSERT INTO `ordered` (`orderID`, `userID`, `menuID`, `orderTime`, `status`) VAL
 (4, 2, 1, '2025-04-19 00:39:34', 'Mottatt'),
 (5, 2, 1, '2025-04-19 00:39:35', 'Mottatt'),
 (6, 2, 2, '2025-04-19 00:40:16', 'Mottatt'),
-(7, 2, 2, '2025-04-19 00:40:17', 'Mottatt'),
-(8, 2, 2, '2025-04-19 00:40:17', 'Mottatt');
+(7, 2, 2, '2025-04-19 00:40:17', 'Underveis'),
+(8, 2, 2, '2025-04-19 00:40:17', 'Underveis');
 
 -- --------------------------------------------------------
 
@@ -239,24 +239,47 @@ INSERT INTO `restaurant` (`restaurantID`, `rName`, `address`, `phoneNr`, `openin
 -- --------------------------------------------------------
 
 --
--- Tabellstruktur for tabell `restaurant_admins`
+-- Tabellstruktur for tabell `restaurantadmin`
 --
 
-CREATE TABLE `restaurant_admins` (
-  `user_id` int(11) NOT NULL,
+CREATE TABLE `restaurantadmin` (
+  `ResUserID` int(11) NOT NULL,
   `restaurantID` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dataark for tabell `restaurant_admins`
+-- Dataark for tabell `restaurantadmin`
 --
 
-INSERT INTO `restaurant_admins` (`user_id`, `restaurantID`) VALUES
+INSERT INTO `restaurantadmin` (`ResUserID`, `restaurantID`) VALUES
 (1, 1),
 (1, 2),
 (2, 1),
-(3, 1),
 (3, 2);
+
+-- --------------------------------------------------------
+
+--
+-- Tabellstruktur for tabell `restaurantadminuser`
+--
+
+CREATE TABLE `restaurantadminuser` (
+  `ResUserID` int(11) NOT NULL,
+  `ResUsername` varchar(100) NOT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `role` enum('superadmin','admin') DEFAULT 'admin',
+  `password` varchar(100) NOT NULL DEFAULT 'temp123'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dataark for tabell `restaurantadminuser`
+--
+
+INSERT INTO `restaurantadminuser` (`ResUserID`, `ResUsername`, `email`, `role`, `password`) VALUES
+(1, 'admin', 'admin@example.com', 'superadmin', 'admin'),
+(2, 'burgeradmin', 'burger@example.com', 'admin', 'temp123'),
+(3, 'pizzaadmin', 'pizza@example.com', 'admin', 'temp123'),
+(4, 'sushiadmin', 'sushi@example.com', 'admin', 'temp123');
 
 -- --------------------------------------------------------
 
@@ -352,11 +375,18 @@ ALTER TABLE `restaurant`
   ADD PRIMARY KEY (`restaurantID`);
 
 --
--- Indexes for table `restaurant_admins`
+-- Indexes for table `restaurantadmin`
 --
-ALTER TABLE `restaurant_admins`
-  ADD PRIMARY KEY (`user_id`,`restaurantID`),
+ALTER TABLE `restaurantadmin`
+  ADD PRIMARY KEY (`ResUserID`,`restaurantID`),
   ADD KEY `restaurantID` (`restaurantID`);
+
+--
+-- Indexes for table `restaurantadminuser`
+--
+ALTER TABLE `restaurantadminuser`
+  ADD PRIMARY KEY (`ResUserID`),
+  ADD UNIQUE KEY `unique_resusername` (`ResUsername`);
 
 --
 -- Indexes for table `users`
@@ -418,6 +448,12 @@ ALTER TABLE `restaurant`
   MODIFY `restaurantID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
+-- AUTO_INCREMENT for table `restaurantadminuser`
+--
+ALTER TABLE `restaurantadminuser`
+  MODIFY `ResUserID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
@@ -468,11 +504,11 @@ ALTER TABLE `ordered`
   ADD CONSTRAINT `ordered_ibfk_2` FOREIGN KEY (`menuID`) REFERENCES `menu` (`menuID`) ON DELETE CASCADE;
 
 --
--- Begrensninger for tabell `restaurant_admins`
+-- Begrensninger for tabell `restaurantadmin`
 --
-ALTER TABLE `restaurant_admins`
-  ADD CONSTRAINT `restaurant_admins_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`userID`) ON DELETE CASCADE,
-  ADD CONSTRAINT `restaurant_admins_ibfk_2` FOREIGN KEY (`restaurantID`) REFERENCES `restaurant` (`restaurantID`) ON DELETE CASCADE;
+ALTER TABLE `restaurantadmin`
+  ADD CONSTRAINT `restaurantadmin_ibfk_1` FOREIGN KEY (`ResUserID`) REFERENCES `restaurantadminuser` (`ResUserID`) ON DELETE CASCADE,
+  ADD CONSTRAINT `restaurantadmin_ibfk_2` FOREIGN KEY (`restaurantID`) REFERENCES `restaurant` (`restaurantID`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
