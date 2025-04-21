@@ -5,52 +5,59 @@ from db import get_connection
 def place_order():
     st.title("🛒 Legg inn bestilling")
 
-    user_id = st.session_state.get("ResUserID")  # Bruk riktig ID fra session
-    if user_id is None:
-        st.error("Du må være logget inn for å bestille.")
-        st.stop()
-
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
-    # Hent restauranter som har menyer
+    # Hent kunder
+    cursor.execute("SELECT userID, fName, lName FROM users")
+    users = cursor.fetchall()
+    user_map = {f"{u['fName']} {u['lName']} (ID: {u['userID']})": u["userID"] for u in users}
+    selected_user_label = st.selectbox("Velg kunde", list(user_map.keys()))
+    selected_user_id = user_map[selected_user_label]
+
+    # Hent restauranter
     cursor.execute("""
         SELECT DISTINCT r.restaurantID, r.rName
         FROM restaurant r
         JOIN menu m ON r.restaurantID = m.restaurantID
     """)
     restaurants = cursor.fetchall()
-    if not restaurants:
-        st.warning("Ingen restauranter tilgjengelig med menyer.")
-        return
-
     rest_map = {f"{r['rName']} (ID: {r['restaurantID']})": r['restaurantID'] for r in restaurants}
-    selected_rest = st.selectbox("Velg restaurant", list(rest_map.keys()))
-    selected_rest_id = rest_map[selected_rest]
+    selected_rest_label = st.selectbox("Velg restaurant", list(rest_map.keys()))
+    selected_rest_id = rest_map[selected_rest_label]
 
-    # Hent menyer fra valgt restaurant
+    # Hent menyer
     cursor.execute("""
-        SELECT menuID, menuName, price, description
-        FROM menu
-        WHERE restaurantID = %s
+        SELECT menuID, menuName, price FROM menu WHERE restaurantID = %s
     """, (selected_rest_id,))
     menus = cursor.fetchall()
+    menu_map = {f"{m['menuName']} - {m['price']:.2f} kr": m["menuID"] for m in menus}
+    selected_menu_label = st.selectbox("Velg meny", list(menu_map.keys()))
+    selected_menu_id = menu_map[selected_menu_label]
 
-    if not menus:
-        st.info("Denne restauranten har ingen menyer.")
-        return
-
-    menu_map = {f"{m['menuName']} - {m['price']} kr": m["menuID"] for m in menus}
-    selected_menu = st.selectbox("Velg meny", list(menu_map.keys()))
-    selected_menu_id = menu_map[selected_menu]
+    # Valg: Skal bestillingen leveres?
+    delivery = st.checkbox("🚚 Skal bestillingen leveres til kunden?")
 
     if st.button("📦 Bekreft bestilling"):
+        # Registrer bestilling på valgt kunde (ikke admin!)
         cursor.execute("""
             INSERT INTO Ordered (userID, menuID, status)
             VALUES (%s, %s, 'Mottatt')
-        """, (user_id, selected_menu_id))
+        """, (selected_user_id, selected_menu_id))
+        order_id = cursor.lastrowid
+
+        # Hvis levering: hent adresse og telefon fra valgt kunde
+        if delivery:
+            cursor.execute("SELECT phoneNr FROM users WHERE userID = %s", (selected_user_id,))
+            user_info = cursor.fetchone()
+
+            cursor.execute("""
+                INSERT INTO Delivery (orderID, deliveryStatus, phoneNrUser)
+                VALUES (%s, 'Under behandling', %s)
+            """, (order_id, user_info["phoneNr"]))
+
         conn.commit()
-        st.success("Bestilling er registrert! 🎉")
+        st.success(f"Bestilling for `{selected_user_label}` ble registrert! 🎉")
 
     cursor.close()
     conn.close()
