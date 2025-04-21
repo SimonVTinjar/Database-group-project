@@ -26,11 +26,11 @@ def show_orders():
     placeholders = ",".join(["%s"] * len(restaurant_ids))
     cursor.execute(f"""
         SELECT o.orderID, o.orderTime, o.status,
-               ru.ResUsername AS customer,
+               u.username AS customer,
                m.menuName, m.price,
                r.rName AS restaurant
         FROM Ordered o
-        JOIN restaurantadminuser ru ON o.userID = ru.ResUserID
+        JOIN users u ON o.userID = u.userID
         JOIN menu m ON o.menuID = m.menuID
         JOIN restaurant r ON m.restaurantID = r.restaurantID
         WHERE m.restaurantID IN ({placeholders})
@@ -42,29 +42,35 @@ def show_orders():
         st.info("Ingen bestillinger funnet.")
         return
 
-    for order in orders:
-        with st.expander(f"📦 Bestilling #{order['orderID']} – {order['restaurant']}"):
-            st.write(f"**Tid:** {order['orderTime']}")
-            st.write(f"**Kunde:** {order['customer']}")
-            st.write(f"**Meny:** {order['menuName']} – {order['price']} kr")
-            st.write(f"**Status nå:** `{order['status']}`")
+    df = pd.DataFrame(orders)
+    df["orderTime"] = pd.to_datetime(df["orderTime"]).dt.strftime("%Y-%m-%d %H:%M")
 
-            new_status = st.selectbox(
-                "Endre status", 
-                ["Mottatt", "Underveis", "Levert"],
-                index=["Mottatt", "Underveis", "Levert"].index(order["status"]),
-                key=f"status_{order['orderID']}"
-            )
+    st.subheader("📄 Alle bestillinger")
+    st.dataframe(df)
 
-            if st.button("💾 Oppdater status", key=f"save_{order['orderID']}"):
-                update_cursor = conn.cursor()
-                update_cursor.execute("""
-                    UPDATE Ordered SET status = %s WHERE orderID = %s
-                """, (new_status, order["orderID"]))
-                conn.commit()
-                update_cursor.close()
-                st.success("Status oppdatert!")
-                st.rerun()
+    st.subheader("✏️ Oppdater status")
+    selected_order = st.selectbox("Velg en bestilling", [f"#{o['orderID']} - {o['restaurant']} ({o['menuName']})" for o in orders])
+    selected_id = int(selected_order.split("#")[1].split(" ")[0])
+    current_order = next((o for o in orders if o["orderID"] == selected_id), None)
+
+    if current_order:
+        st.write(f"**Kunde:** {current_order['customer']}")
+        st.write(f"**Meny:** {current_order['menuName']} – {current_order['price']} kr")
+        st.write(f"**Status nå:** `{current_order['status']}`")
+
+        new_status = st.selectbox(
+            "Ny status",
+            ["Mottatt", "Underveis", "Levert"],
+            index=["Mottatt", "Underveis", "Levert"].index(current_order["status"])
+        )
+
+        if st.button("💾 Oppdater status"):
+            cursor.execute("""
+                UPDATE Ordered SET status = %s WHERE orderID = %s
+            """, (new_status, selected_id))
+            conn.commit()
+            st.success("Status oppdatert!")
+            st.rerun()
 
     cursor.close()
     conn.close()
