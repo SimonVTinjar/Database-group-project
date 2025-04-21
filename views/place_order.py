@@ -39,7 +39,7 @@ def place_order():
     delivery = st.checkbox("🚚 Skal bestillingen leveres til kunden?")
 
     if st.button("📦 Bekreft bestilling"):
-        # Registrer bestilling på valgt kunde (ikke admin!)
+        # Registrer bestilling på valgt kunde
         cursor.execute("""
             INSERT INTO Ordered (userID, menuID, status)
             VALUES (%s, %s, 'Mottatt')

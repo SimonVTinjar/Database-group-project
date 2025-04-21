@@ -25,13 +25,13 @@ def show_deliveries():
 
     placeholders = ",".join(["%s"] * len(restaurant_ids))
 
-    # Hent leveranser knyttet til bestillinger fra restauranter brukeren har tilgang til
+    # Hent leveranser med korrekt kobling til brukere (ikke admin)
     query = f"""
         SELECT d.deliveryID, d.orderID, d.deliveryTime, d.deliveryStatus, 
-               ru.ResUsername AS customer, r.rName
+               CONCAT(u.fName, ' ', u.lName) AS customer, r.rName
         FROM Delivery d
         JOIN Ordered o ON d.orderID = o.orderID
-        JOIN Restaurantadminuser ru ON o.userID = ru.ResUserID
+        JOIN users u ON o.userID = u.userID
         JOIN menu m ON o.menuID = m.menuID
         JOIN restaurant r ON m.restaurantID = r.restaurantID
         WHERE r.restaurantID IN ({placeholders})
